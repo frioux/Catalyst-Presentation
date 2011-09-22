@@ -44,7 +44,72 @@
 </div>
 
 <div class="slide">
-   <h2>Dispatching</h2>
+   <h2>Overview</h2>
+   <ul>
+      <li class="slide"> MV<u>C</u> </li>
+      <li class="slide"> Dispatcher </li>
+      <li class="slide"> Lots of Glue </li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>MVC</h2>
+   <ul>
+      <li class="slide"> MyApp::Model::DB, MyApp::Model::Kioku </li>
+      <li class="slide"> Just a wrapper namespace </li>
+      <li class="slide"> MyApp::View::TT, MyApp::View::JSON </li>
+      <li class="slide"> Also a wrapper namespace </li>
+      <li class="slide"> MyApp::Controller::Users, MyApp::Controller::Alarms, ... </li>
+      <li class="slide"> All the "Catalyst" code (which, optimally, is very little and is all glue) </li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: The Timeline</h2>
+   <ol>
+      <li class="slide"> foo.plx + if statement - <u>http://foo.com/cgi/foo.plx?mode=add_user</u></li>
+      <li class="slide"> CGI::Application + add_user subroutine - <u>http://foo.com/cgi/foo.plx?mode=add_user</u></li>
+      <li class="slide"> CGI::Application + CGI::Application::Dispatcher - <u>http://foo.com/dispatcher/foo/add_user</u></li>
+      <li class="slide"> Vanilla Catalyst + MyApp::Controller::Foo::add_user - <u>http://foo.com/foo/add_user</u></li>
+      <li class="slide"> Advanced Catalyst - <u>DELETE http://foo.com/users/1/friends/2</u></li>
+   </ol>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: Basic Catalyst</h2>
+   <ul>
+      <li class="slide"> Uses subroutine attributes (kinda gross, but works) </li>
+      <li class="slide"> <pre> sub add_user : Local  { ... } </pre></li>
+      <li class="slide"> <pre> sub home     : Global { ... } </pre></li>
+      <li class="slide"> <pre> sub add_friend : Path('add_buddy') { ... } </pre></li>
+      <li class="slide"> <pre> sub about : Path('/about') { ... } </pre></li>
+      <li class="slide"> There are more, but we'll either talk about them later, or they are deprecated/weird</li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: Chaining</h2>
+   <ul>
+      <li class="slide"> Advanced, but awesome </li>
+      <li class="slide"> <pre> sub load_users : Chained('/') PathPart('users') CaptureArgs(0) { ... } </pre></li>
+      <li class="slide"> <pre> sub users : Chained('load_users') PathPart('') Args(0) { ... } </pre></li>
+      <li class="slide"> <pre> sub load_user : Chained('load_users') PathPart('') CaptureArgs(1) { ... } </pre></li>
+      <li class="slide"> <pre> sub user : Chained('load_user') PathPart('') Args(0) { ... } </pre></li>
+      <li class="slide"> <pre> sub load_roles : Chained('load_user') PathPart('roles') CaptureArgs(0) { ... } </pre></li>
+      <li class="slide"> <pre> sub roles : Chained('load_roles') PathPart('') Args(0) { ... } </pre></li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: Chaining Multi Controller</h2>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: Catalyst::Action::REST</h2>
+</div>
+
+<div class="slide">
+   <h2>Dispatching: Catalyst::Action::REST + Chaining</h2>
 </div>
 
 <div class="slide">
