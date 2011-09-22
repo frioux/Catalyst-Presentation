@@ -105,6 +105,28 @@
 </div>
 
 <div class="slide">
+   <h2> Sidenote: you don't have to use attributes: </h2>
+__PACKAGE__->config(
+   actions => {
+      load_users => { Chained => '/', PathPart => 'users', CaptureArgs => 0 },
+      load_user  => { Chained => 'load_users', PathPart => 'user', CaptureArgs => 1 },
+      load_roles => { Chained => 'load_user', PathPart => 'roles', CaptureArgs => 0 },
+      users => { Chained => 'load_users', PathPart => '', Args => 0 },
+      user  => { Chained => 'load_user',  PathPart => '', Args => 0 },
+      roles => { Chained => 'load_roles', PathPart => '', Args => 0 },
+   },
+);
+
+sub load_users { ... }
+sub users { ... }
+sub load_user { ... }
+sub user { ... }
+sub load_roles { ... }
+sub roles { ... }
+</div>
+
+
+<div class="slide">
    <h2>Dispatching: Catalyst::Action::REST</h2>
 </div>
 
