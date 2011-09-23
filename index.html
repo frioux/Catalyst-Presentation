@@ -41,7 +41,7 @@
       </li>
       <li>
          <h3>When</h3>
-         <p>Fall Equinox 2011</p>
+         <p>Autumn Equinox 2011</p>
       </li>
    </ul>
 </div>
@@ -56,8 +56,22 @@
 </div>
 
 <div class="slide">
+   <h2>Stuff you'll need to know</h2>
+   <ul>
+      <li class="slide"> $c </li>
+      <li class="slide"> Kindav a god object..</li>
+      <li class="slide"> <pre class="brush: perl"> $c-&gt;model('DB') </pre> </li>
+      <li class="slide"> <pre class="brush: perl"> $c-&gt;view('TT') </pre> </li>
+      <li class="slide"> <pre class="brush: perl"> $c-&gt;request </pre> </li>
+      <li class="slide"> <pre class="brush: perl"> $c-&gt;response </pre> </li>
+      <li class="slide"> <em><a href="https://metacpan.org/module/Catalyst">YAWN</a></em> </li>
+   </ul>
+</div>
+
+<div class="slide">
    <h2>MVC</h2>
    <ul>
+      <li class="slide"> What even is this? </li>
       <li class="slide"> MyApp::Model::DB, MyApp::Model::Kioku </li>
       <li class="slide"> Just a wrapper namespace </li>
       <li class="slide"> MyApp::View::TT, MyApp::View::JSON </li>
@@ -319,10 +333,20 @@ method account_DELETE($c) : RequiresRole('delete') {
 </div>
 
 <div class="slide">
+   <h2>My Stuff</h2>
+   <ul>
+      <li class="slide"><a href="https://metacpan.org/module/Catalyst::TraitFor::Controller::DBIC::DoesPaging">Catalyst::TraitFor::Controller::DBIC::DoesPaging</a></li>
+      <li class="slide"><a href="https://metacpan.org/module/Catalyst::TraitFor::Controller::DoesExtPaging">Catalyst::TraitFor::Controller::DoesExtPaging</a></li>
+      <li class="slide">If you use these nathan will never have to yell at you for forgetting to make all everything sort, paginate, etc</li>
+   </ul>
+</div>
+
+<div class="slide">
    <h2>Logging</h2>
    <ul>
       <li class="slide"> PLEASE LOG </li>
-      <li class="slide"> Log4perl </li>
+      <li class="slide"> <a href="https://metacpan.org/module/Log::Log4perl">Log::Log4perl</a> </li>
+      <li class="slide"> <a href="https://metacpan.org/module/Log::Contextual">Log::Contextual</a> </li>
       <li class="slide"> OK config:<pre>
 log4perl.rootLogger=ALL, SCREEN, LOGFILE
 
