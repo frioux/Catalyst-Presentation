@@ -301,50 +301,179 @@ method account_DELETE($c) : RequiresRole('delete') {
 
 <div class="slide">
    <h2>Rich Ecosystem</h2>
-</div>
-
-<div class="slide">
-   <h2>Logging</h2>
-   <ul>
-      <li class="slide"> Log4perl </li>
-   </ul>
-</div>
-
-<div class="slide">
-   <h2>Testing</h2>
-   <ul>
-      <li class="slide"> PSGI </li>
-   </ul>
+   <ol>
+      <li class="slide"> All that sticky glue </li>
+      <li class="slide"> too much to talk about </li>
+      <li class="slide"> what should you use </li>
+   </ol>
 </div>
 
 <div class="slide">
    <h2>MyApp::Util</h2>
    <ul>
       <li class="slide">Modes</li>
+      <li class="slide">DB Handle</li>
+      <li class="slide">Schema Handle</li>
+      <li class="slide">Logger</li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Logging</h2>
+   <ul>
+      <li class="slide"> PLEASE LOG </li>
+      <li class="slide"> Log4perl </li>
+      <li class="slide"> OK config:<pre>
+log4perl.rootLogger=ALL, SCREEN, LOGFILE
+
+log4perl.appender.SCREEN=Log::Log4perl::Appender::Screen
+log4perl.appender.SCREEN.utf8=1
+log4perl.appender.SCREEN.layout=PatternLayout
+log4perl.appender.SCREEN.layout.ConversionPattern=&lt;%c&gt; [%p] %m%n
+
+log4perl.appender.LOGFILE=Log::Log4perl::Appender::File
+log4perl.appender.LOGFILE.filename=/var/log/myerrs.log
+log4perl.appender.LOGFILE.mode=append
+
+log4perl.filter.important           = Log::Log4perl::Filter::LevelRange
+log4perl.filter.important.LevelMin  = WARN
+log4perl.filter.important.LevelMax  = FATAL
+log4perl.filter.important.AcceptOnMatch = true
+log4perl.filter.catalyst = sub { my %p = @_; $p{log4p_category} =~ /^catalyst/i }
+log4perl.filter.not_important_catalyst       = Log::Log4perl::Filter::Boolean
+log4perl.filter.not_important_catalyst.logic = !catalyst || important
+      </pre></li>
+      <li class="slide"> Integration:
+<pre class="brush: perl; gutter: true">
+# MyApp/Util.pm
+
+sub init_logger {
+   require Log::Log4perl;
+   require Log::Contextual;
+   Log::Log4perl-&gt;init_and_watch('lynx_sms_logger.conf');
+   Log::Contextual::set_logger(sub {
+      Log::Log4perl::get_logger($_[0])
+   });
+}
+</pre></li>
+
+<li class="slide"> <pre class="brush: perl; gutter: true">
+# script.pl
+use MyApp::Util;
+
+MyApp::Util::init_logger();
+</pre></li>
+
+<li class="slide"><pre class="brush: perl; gutter: true">
+# MyApp.pm
+unless (__PACKAGE__-&gt;debug) {
+   require Log::Log4perl;
+   require Try::Tiny;
+   if (Try::Tiny::try { Log::Log4perl::get_logger() }) {
+     no strict 'refs';
+     *log = sub { Log::Log4perl::get_logger(scalar caller) }
+   }
+}
+      </pre></li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Testing</h2>
+   <ul>
+      <li class="slide"> PSGI (since Catalyst 1.9) </li>
+      <li class="slide">
+<pre class="brush: perl; gutter: true">
+# t/lib/MyApp/Test.pm
+
+sub as_psgi {
+   my $app;
+   if (Lynx::Util::mode() eq 'live') {
+      plan skip_all =&gt; 'Set the LIVE_TEST_SERVER envvar to run live tests'
+         unless $ENV{LIVE_TEST_SERVER};
+
+      require Plack::App::Proxy;
+      $app = Plack::App::Proxy
+         -&gt;new( remote =&gt; "http://$ENV{LIVE_TEST_SERVER}" )
+         -&gt;to_app;
+   } else {
+      require Lynx;
+      require Plack::Builder;
+      require Plack::App::File;
+
+      my $builder = Plack::Builder-&gt;new;
+      $builder-&gt;mount('/app' =&gt; Lynx-&gt;psgi_app);
+      $builder-&gt;mount('/' =&gt; Plack::App::File-&gt;new(root =&gt; ".")-&gt;to_app);
+
+      $app = $builder;
+   }
+   return $app
+}
+</pre>
+
+<pre class="brush: perl; gutter: true">
+my $mech = Test::WWW::Mechanize::PSGI-&gt;new( app =&gt; $app );
+
+$mech-&gt;get( "/cgi/logon.plx?UserID=test&Password=test"  );
+$mech-&gt;content_lacks( 'Login Error', 'Login should succeed');
+$mech-&gt;content_lacks( 'ODBC Error', 'No DB error');
+</pre>
+      </li>
    </ul>
 </div>
 
 <div class="slide">
    <h2>TXN Wrap</h2>
-</div>
+   <ul>
+   <li class="slide">Good idea</li>
+<li class="slide">DBIx::Class: <pre class="brush: perl; gutter: true">
+around dispatch =&gt; sub {
+   my ($orig, $self, @args) = (@_);
 
-<div class="slide">
-   <h2>Catalyst::Action::REST</h2>
+   return $self-&gt;model('DB')-&gt;txn_do(sub { $self-&gt;$orig(@args) });
+};
+</pre></li>
+<li class="slide">Kioku: <pre class="brush: perl; gutter: true">
+around dispatch =&gt; sub {
+   my ($orig, $self, @args) = (@_);
+
+   my $dir = $self-&gt;model('DB')-&gt;schema-&gt;kiokudb_handle;
+
+   return $dir-&gt;txn_do(
+      scope =&gt; 1,
+      body =&gt; sub { $self-&gt;$orig(@args) },
+   );
+};
+</pre></li>
+</ul>
 </div>
 
 <div class="slide">
    <h2>Catalyst::TraitFor::Request::REST::ForBroswers</h2>
+<ul>
+<li class="slide"><pre class="brush: perl; gutter: true">
+# in MyApp.pm
+use CatalystX::RoleApplicator;
+__PACKAGE__-&gt;apply_request_class_roles(qw[
+    Catalyst::TraitFor::Request::REST::ForBrowsers
+]);
+</pre></li>
+<li class="slide"><pre class="brush: perl; gutter: true">
+# in action
+if ($c-&gt;request-&gt;looks_like_browser) { ... }
+</pre></li>
 </div>
 
 <div class="slide">
-   <h2>MTSI::RESTController</h2>
-</div>
-
-<div class="slide">
-   <h2>Controller::Root::end</h2>
+   <h2>MTSI::Controller::REST</h2>
    <ul>
-      <li class="slide">Error Handling</li>
-      <li class="slide">Logging</li>
+      <li class="slide">You should probably fork it</li>
+      <li class="slide">Handles: <ol>
+         <li class="slide">User Exceptions</li>
+         <li class="slide">404 Exceptions</li>
+         <li class="slide">Vanilla Exceptions</li>
+         <li class="slide">Basic Logging of Exceptions</li>
+      </ol></li>
    </ul>
 </div>
 
@@ -352,11 +481,50 @@ method account_DELETE($c) : RequiresRole('delete') {
    <h2>CatalystX::InjectComponent</h2>
    <ul>
       <li class="slide">/login/as/frew</li>
+      <li class="slide">
+<pre class="brush: perl; gutter: true">
+# in MyApp.pm
+use CatalystX::InjectComponent;
+after setup_components =&gt; sub {
+   my $class = shift;
+
+   CatalystX::InjectComponent-&gt;inject(
+      into      =&gt; $class,
+      component =&gt; 'Lynx::Debug::Controller::Login::As',
+   )
+} if Lynx::Util::mode() eq 'dev';
+</pre>
+      </li>
    </ul>
 </div>
 
 <div class="slide">
    <h2>Catalyst::Controller::Accessors</h2>
+
+   <ul>
+<li class="slide"><pre class="brush: perl; gutter: true">
+use Catalyst::Controller::Accessors;
+
+cat_has user =&gt; (
+  is        =&gt; 'ro',
+  namespace =&gt; 'Lynx::Controller::User',
+);
+
+cat_has role =&gt; ( is =&gt; 'rw' );
+</pre></li>
+<li class="slide"><pre class="brush: perl; gutter: true">
+# in action
+
+sub role {
+   my ($self, $c, $id) = @_;
+
+   $self-&gt;role($c,
+      $self-&gt;user($c)-&gt;roles-&gt;find($id)
+   );
+
+   # ...
+}
+</pre></li>
 </div>
 
 <a href="#" class="deck-prev-link" title="Previous">&#8592;</a>
