@@ -82,10 +82,10 @@
    <h2>Dispatching: Basic Catalyst</h2>
    <ul>
       <li class="slide"> Uses subroutine attributes (kinda gross, but works) </li>
-      <li class="slide"> <pre> sub add_user : Local  { ... } </pre></li>
-      <li class="slide"> <pre> sub home     : Global { ... } </pre></li>
-      <li class="slide"> <pre> sub add_friend : Path('add_buddy') { ... } </pre></li>
-      <li class="slide"> <pre> sub about : Path('/about') { ... } </pre></li>
+      <li class="slide"> <u>/foo/add_user</u> <pre class="brush: perl"> sub add_user : Local  { ... } </pre></li>
+      <li class="slide"> <u>/home</u> <pre class="brush: perl"> sub home     : Global { ... } </pre></li>
+      <li class="slide"> <u>/foo/add_buddy</u> <pre class="brush: perl"> sub add_friend : Path('add_buddy') { ... } </pre></li>
+      <li class="slide"> <u>/about</u> <pre class="brush: perl"> sub about : Path('/about') { ... } </pre></li>
       <li class="slide"> There are more, but we'll either talk about them later, or they are deprecated/weird</li>
    </ul>
 </div>
@@ -94,29 +94,45 @@
    <h2>Dispatching: Chaining</h2>
    <ul>
       <li class="slide"> Advanced, but awesome </li>
-      <li class="slide"> <pre> sub load_users : Chained('/') PathPart('users') CaptureArgs(0) { ... } </pre></li>
-      <li class="slide"> <pre> sub users : Chained('load_users') PathPart('') Args(0) { ... } </pre></li>
-      <li class="slide"> <pre> sub load_user : Chained('load_users') PathPart('') CaptureArgs(1) { ... } </pre></li>
-      <li class="slide"> <pre> sub user : Chained('load_user') PathPart('') Args(0) { ... } </pre></li>
-      <li class="slide"> <pre> sub load_roles : Chained('load_user') PathPart('roles') CaptureArgs(0) { ... } </pre></li>
-      <li class="slide"> <pre> sub roles : Chained('load_roles') PathPart('') Args(0) { ... } </pre></li>
+      <li class="slide"> private <pre class="brush: perl"> sub load_users : Chained('/') PathPart('users') CaptureArgs(0) { ... } </pre></li>
+      <li class="slide"> <u>/users</u> <pre class="brush: perl"> sub users : Chained('load_users') PathPart('') Args(0) { ... } </pre></li>
+      <li class="slide"> private <pre class="brush: perl"> sub load_user : Chained('load_users') PathPart('') CaptureArgs(1) { ... } </pre></li>
+      <li class="slide"> <u>/users/1</u> <pre class="brush: perl"> sub user : Chained('load_user') PathPart('') Args(0) { ... } </pre></li>
+      <li class="slide"> private <pre class="brush: perl"> sub load_roles : Chained('load_user') PathPart('roles') CaptureArgs(0) { ... } </pre></li>
+      <li class="slide"> <u>/users/1/roles</u> <pre class="brush: perl"> sub roles : Chained('load_roles') PathPart('') Args(0) { ... } </pre></li>
    </ul>
 </div>
 
 <div class="slide">
    <h2>Dispatching: Chaining Multi Controller</h2>
+      <li class="slide"> <pre class="brush: perl">
+package MyApp::Controller::Users;
+# ...
+sub load_users : Chained('/') PathPart('users') CaptureArgs(0) { ... }
+sub users : Chained('load_users') PathPart('') Args(0) { ... }
+sub load_user : Chained('load_users') PathPart('') CaptureArgs(1) { ... }
+sub user : Chained('load_user') PathPart('') Args(0) { ... }
+      </pre></li>
+      <li class="slide"> <pre class="brush: perl">
+package MyApp::Controller::Users::Roles;
+# ...
+sub load_roles : Chained('/users/load_users') PathPart('roles') CaptureArgs(0) { ... }
+sub roles : Chained('load_roles') PathPart('') Args(0) { ... }
+      </pre></li>
+      <li class="slide">NOTE: The second class could have just as easily been named MyApp::Controller::Roles</li>
 </div>
 
 <div class="slide">
    <h2> Sidenote: you don't have to use attributes: </h2>
-__PACKAGE__->config(
-   actions => {
-      load_users => { Chained => '/', PathPart => 'users', CaptureArgs => 0 },
-      load_user  => { Chained => 'load_users', PathPart => 'user', CaptureArgs => 1 },
-      load_roles => { Chained => 'load_user', PathPart => 'roles', CaptureArgs => 0 },
-      users => { Chained => 'load_users', PathPart => '', Args => 0 },
-      user  => { Chained => 'load_user',  PathPart => '', Args => 0 },
-      roles => { Chained => 'load_roles', PathPart => '', Args => 0 },
+   <pre class="brush: perl">
+__PACKAGE__-&gt;config(
+   actions =&gt; {
+      load_users =&gt; { Chained =&gt; '/',          PathPart =&gt; 'users', CaptureArgs =&gt; 0 },
+      load_user  =&gt; { Chained =&gt; 'load_users', PathPart =&gt; 'user',  CaptureArgs =&gt; 1 },
+      load_roles =&gt; { Chained =&gt; 'load_user',  PathPart =&gt; 'roles', CaptureArgs =&gt; 0 },
+      users      =&gt; { Chained =&gt; 'load_users', PathPart =&gt; '',             Args =&gt; 0 },
+      user       =&gt; { Chained =&gt; 'load_user',  PathPart =&gt; '',             Args =&gt; 0 },
+      roles      =&gt; { Chained =&gt; 'load_roles', PathPart =&gt; '',             Args =&gt; 0 },
    },
 );
 
@@ -126,15 +142,161 @@ sub load_user { ... }
 sub user { ... }
 sub load_roles { ... }
 sub roles { ... }
+</pre>
 </div>
 
+<div class="slide">
+   <h2> Why not use attributes? </h2>
+   <ul>
+      <li class="slide"> Localize actions </li>
+      <li class="slide"> Easily Reuse actions: <pre class="brush: perl">
+with 'Lynx::TraitFor::Controller::RunMethod';
+
+__PACKAGE__-&gt;config(
+   go_prefix =&gt; 'configure',
+   actions =&gt; {
+      go =&gt; {
+         Chained =&gt; '/currentuser/shareddashboards/gadgets/item',
+         PathPart =&gt; 'configure',
+      },
+   },
+);
+</pre> </li>
+      <li class="slide"> Configure actions with code </li>
+   </ul>
+</div>
 
 <div class="slide">
    <h2>Dispatching: Catalyst::Action::REST</h2>
+   <ul>
+      <li class="slide">Non-core</li>
+      <li class="slide"> <pre class="brush: perl"> sub users : Local ActionClass('REST') {}</pre></li>
+
+      <li class="slide"> <pre class="brush: perl">
+sub users_GET { ... }    # GET /foo/users
+                         # GET /foo/users/1
+                         # GET /foo/users/1/2/3/4/5
+sub users_POST :Args(0) { ... }   # POST /foo/users
+sub users_PUT :Args(1) { ... }    # PUT /foo/users/1
+sub users_DELETE :Args(1) { ... } # DELETE /foo/users/1
+</pre></li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Aside: Why REST?</h2>
+   <ul>
+      <li class="slide">Shared language</li>
+      <li class="slide">Catalyst::Action::REST == awesome</li>
+      <li class="slide">Hopefully really good support by MFW soonish</li>
+   </ul>
 </div>
 
 <div class="slide">
    <h2>Dispatching: Catalyst::Action::REST + Chaining</h2>
+   <ul>
+      <li class="slide">Get excited</li>
+      <li class="slide"> <pre class="brush: perl"> sub base : Chained('/') PathPart('users') { ... }</pre></li>
+      <li class="slide"> <pre class="brush: perl"> sub users : Chained('base') PathPart('') { ... }</pre></li>
+      <li class="slide"> <pre class="brush: perl">
+sub users_GET { ... }    # GET /users
+sub users_POST { ... }   # POST /users
+      </pre></li>
+      <li class="slide"> <pre class="brush: perl"> sub item : Chained('base') PathPart('') CatpureArgs(1) { ... }</pre></li>
+      <li class="slide"> <pre class="brush: perl"> sub user : Chained('item') PathPart('') { ... }</pre></li>
+
+      <li class="slide"> <pre class="brush: perl">
+sub user_GET { ... }    # GET /foo/users/1
+sub user_PUT { ... }    # PUT /foo/users/1
+sub user_DELETE { ... } # DELETE /foo/users/1
+</pre></li>
+   </ul>
+</div>
+
+<div class="slide">
+   <h2>Namespaced Stash</h2>
+   <ul>
+      <li>My own idiom</li>
+      <li>Easy copy-pasta</li>
+      <li>Library to do it for you in a later slide</li>
+      <li><pre class="brush: perl"> $c-&gt;stash-&gt;{+__PACKAGE__}{foo} </pre>
+      <li><pre class="brush: perl"> $c-&gt;stash-&gt;{'MyApp::Controller::Users'}{foo} </pre>
+   </ul>
+</div>
+
+</div>
+
+<div class="slide">
+   <h2>Real Example</h2>
+<pre class="brush: perl; gutter: true">
+package Lynx::SMS::Controller::Accounts;
+
+use Moose;
+use namespace::autoclean;
+
+use syntax 'method';
+
+BEGIN { extends 'Lynx::SMS::RESTController' };
+
+with 'Catalyst::TraitFor::Controller::DBIC::DoesPaging',
+     'Catalyst::TraitFor::Controller::DoesExtPaging';
+
+sub base : Chained('/') PathPart('accounts') CaptureArgs(0) {
+   my ($self, $c) = @_;
+   $c-&gt;stash-&gt;{+__PACKAGE__}{rs} = $c-&gt;model('DB::Account');
+}
+
+sub item : Chained('base') PathPart('') CaptureArgs(1) {
+   my ($self, $c, $id) = @_;
+   $c-&gt;stash-&gt;{+__PACKAGE__}{id} = $id;
+   $c-&gt;stash-&gt;{+__PACKAGE__}{thing} =
+      $c-&gt;stash-&gt;{+__PACKAGE__}{rs}-&gt;find($id);
+}
+
+sub accounts :Chained('base') PathPart('') Args(0) ActionClass('REST') {}
+
+method accounts_POST($c) : RequiresRole('write') {
+   my $params = $c-&gt;request-&gt;data-&gt;{data};
+
+   my $foo = $c-&gt;stash-&gt;{+__PACKAGE__}{rs}-&gt;create($params);
+
+   $c-&gt;stash-&gt;{rest} = { success =&gt; 1, data =&gt; $foo };
+}
+
+method accounts_GET($c) : RequiresRole('read') {
+   $c-&gt;stash-&gt;{rest} = $self-&gt;ext_paginate(
+      $self-&gt;search($c,
+         $self-&gt;paginate($c,
+            $self-&gt;sort($c, $c-&gt;stash-&gt;{+__PACKAGE__}{rs})
+         )
+      )
+   );
+}
+
+sub account :Chained('item') PathPart('') Args(0) ActionClass('REST') {}
+
+method account_GET($c) : RequiresRole('read') {
+   $c-&gt;stash-&gt;{rest} = {
+      success =&gt; 1,
+      data =&gt; $c-&gt;stash-&gt;{+__PACKAGE__}{thing},
+   };
+}
+
+method account_PUT($c) : RequiresRole('write') {
+   my $foo = $c-&gt;stash-&gt;{+__PACKAGE__}{thing};
+   my $params = $c-&gt;request-&gt;data-&gt;{data};
+   $foo-&gt;update($params);
+
+   $c-&gt;stash-&gt;{rest} = { success =&gt; 1, data =&gt; $foo };
+}
+
+method account_DELETE($c) : RequiresRole('delete') {
+   $c-&gt;stash-&gt;{+__PACKAGE__}{rs}-&gt;search({
+      id =&gt; $c-&gt;stash-&gt;{+__PACKAGE__}{id},
+   })-&gt;delete;
+   $c-&gt;stash-&gt;{rest} = { success =&gt; 1 };
+}</pre>
+
 </div>
 
 <div class="slide">
