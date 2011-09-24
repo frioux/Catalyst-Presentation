@@ -211,18 +211,18 @@ sub users_DELETE :Args(1) { ... } # DELETE /foo/users/1
    <ul>
       <li class="slide">Get excited</li>
       <li class="slide"> <pre class="brush: perl"> sub base : Chained('/') PathPart('users') { ... }</pre></li>
-      <li class="slide"> <pre class="brush: perl"> sub users : Chained('base') PathPart('') { ... }</pre></li>
+      <li class="slide"> <pre class="brush: perl"> sub users : Chained('base') PathPart('') ActionClass('REST') {}</pre></li>
       <li class="slide"> <pre class="brush: perl">
 sub users_GET { ... }    # GET /users
 sub users_POST { ... }   # POST /users
       </pre></li>
       <li class="slide"> <pre class="brush: perl"> sub item : Chained('base') PathPart('') CatpureArgs(1) { ... }</pre></li>
-      <li class="slide"> <pre class="brush: perl"> sub user : Chained('item') PathPart('') { ... }</pre></li>
+      <li class="slide"> <pre class="brush: perl"> sub user : Chained('item') PathPart('')ActionClass('REST') {}</pre></li>
 
       <li class="slide"> <pre class="brush: perl">
-sub user_GET { ... }    # GET /foo/users/1
-sub user_PUT { ... }    # PUT /foo/users/1
-sub user_DELETE { ... } # DELETE /foo/users/1
+sub user_GET { ... }    # GET /users/1
+sub user_PUT { ... }    # PUT /users/1
+sub user_DELETE { ... } # DELETE /users/1
 </pre></li>
    </ul>
 </div>
